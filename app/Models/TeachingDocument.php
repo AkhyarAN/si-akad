@@ -58,11 +58,11 @@ class TeachingDocument extends Model
     public function getTypeLabelAttribute()
     {
         return match ($this->type) {
-            'rpp' => 'RPP',
-            'silabus' => 'Silabus',
+            'modul_ajar' => 'Modul Ajar',
+            'atp' => 'Alur Tujuan Pembelajaran (ATP)',
             'prota' => 'Program Tahunan',
             'prosem' => 'Program Semester',
-            'kkm' => 'KKM',
+            'kktp' => 'KKTP',
             'lainnya' => 'Lainnya',
             default => $this->type,
         };

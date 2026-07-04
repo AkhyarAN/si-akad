@@ -7,11 +7,16 @@
         <h3 style="font-size: 18px; font-weight: 700;">Jadwal Pelajaran</h3>
         <p style="color: var(--text-muted); font-size: 13px;">Kelola jadwal pelajaran per kelas</p>
     </div>
-    @if(isset($selectedClass))
-    <button type="button" class="btn btn-primary" onclick="document.getElementById('modalAdd').classList.add('show')">
-        <i class="bi bi-plus-lg"></i> Tambah Jadwal Kelas {{ $selectedClass->name }}
-    </button>
-    @endif
+    <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('importModal').style.display='flex'">
+            <i class="bi bi-file-earmark-excel"></i> Import Data
+        </button>
+        @if(isset($selectedClass))
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('modalAdd').classList.add('show')">
+            <i class="bi bi-plus-lg"></i> Tambah Jadwal Kelas {{ $selectedClass->name }}
+        </button>
+        @endif
+    </div>
 </div>
 
 <div class="card" style="margin-bottom: 20px;">
@@ -44,7 +49,7 @@
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
         @foreach($days as $day)
             @php
-                $daySchedules = $schedules->where('day', $day)->sortBy('start_time');
+                $daySchedules = $schedules->where('day', $day)->sortBy('lesson_hour');
             @endphp
             
             <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;">
@@ -59,8 +64,8 @@
                     @else
                         @foreach($daySchedules as $schedule)
                         <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px dashed rgba(51, 65, 85, 0.5);">
-                            <div style="font-family: monospace; font-size: 11px; color: var(--text-muted); min-width: 80px;">
-                                {{ substr($schedule->start_time, 0, 5) }} - {{ substr($schedule->end_time, 0, 5) }}
+                            <div style="font-family: monospace; font-size: 11px; color: var(--text-muted); min-width: 60px;">
+                                Jam Ke-{{ $schedule->lesson_hour }}
                             </div>
                             <div style="flex: 1; min-width: 0;">
                                 <div style="font-weight: 600; color: var(--text-primary); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $schedule->subject->name }}">
@@ -109,15 +114,13 @@
                 </select>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div class="form-group">
-                    <label class="form-label">Jam Mulai *</label>
-                    <input type="time" name="start_time" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Jam Selesai *</label>
-                    <input type="time" name="end_time" class="form-control" required>
-                </div>
+            <div class="form-group">
+                <label class="form-label">Jam Ke- *</label>
+                <select name="lesson_hour" class="form-control" required>
+                    @for($i=1; $i<=9; $i++)
+                        <option value="{{ $i }}">Jam Ke-{{ $i }}</option>
+                    @endfor
+                </select>
             </div>
 
             <div class="form-group">
@@ -153,5 +156,29 @@
     <p>Silakan pilih kelas terlebih dahulu untuk melihat dan mengelola jadwal pelajaran.</p>
 </div>
 @endif
+
+<!-- Modal Import -->
+<div class="modal-backdrop" id="importModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0;">Import Jadwal Pelajaran</h3>
+            <button onclick="document.getElementById('importModal').style.display='none'" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+        </div>
+        <form action="{{ route('master.schedules.import') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label">File Template (Excel/CSV)</label>
+                <input type="file" name="file" class="form-control" required accept=".xlsx,.xls,.csv" style="padding: 12px 16px;">
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">
+                    Gunakan template standar. <a href="{{ asset('template_jadwal.csv') }}" download style="color: var(--primary);">Download Template CSV</a>
+                </small>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('importModal').style.display='none'">Batal</button>
+                <button type="submit" class="btn btn-primary">Import Sekarang</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 @endsection

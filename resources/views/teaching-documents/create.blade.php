@@ -18,12 +18,12 @@
             <div class="form-group">
                 <label class="form-label">Jenis Dokumen *</label>
                 <select name="type" class="form-control" required>
-                    <option value="">Pilih Jenis</option>
-                    <option value="rpp">RPP (Rencana Pelaksanaan Pembelajaran)</option>
-                    <option value="silabus">Silabus</option>
+                    <option value="">Pilih Jenis Perangkat</option>
+                    <option value="modul_ajar">Modul Ajar</option>
+                    <option value="atp">Alur Tujuan Pembelajaran (ATP)</option>
                     <option value="prota">Program Tahunan (Prota)</option>
                     <option value="prosem">Program Semester (Prosem)</option>
-                    <option value="kkm">KKM</option>
+                    <option value="kktp">Kriteria Ketercapaian (KKTP)</option>
                     <option value="lainnya">Lainnya</option>
                 </select>
             </div>

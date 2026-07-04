@@ -16,7 +16,7 @@ class WhatsAppService
     public function __construct()
     {
         $this->apiUrl = config('whatsapp.fonnte.api_url');
-        $this->apiToken = config('whatsapp.fonnte.api_token');
+        $this->apiToken = \App\Models\Setting::get('wa_api_token', '');
     }
 
     /**
@@ -24,6 +24,13 @@ class WhatsAppService
      */
     public function sendMessage(string $phone, string $message): array
     {
+        if (\App\Models\Setting::get('wa_status', 'inactive') !== 'active') {
+            return [
+                'success' => false,
+                'response' => 'WhatsApp Gateway is inactive in settings.',
+            ];
+        }
+
         try {
             $response = Http::withHeaders([
                 'Authorization' => $this->apiToken,

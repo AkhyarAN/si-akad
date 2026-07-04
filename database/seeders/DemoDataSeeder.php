@@ -182,8 +182,7 @@ class DemoDataSeeder extends Seeder
                         'teacher_id' => $teachers[$ti]->id,
                         'academic_year_id' => $academicYear->id,
                         'day' => $day,
-                        'start_time' => $times[$t][0],
-                        'end_time' => $times[$t][1],
+                        'lesson_hour' => $t + 1,
                     ]);
                     $subjectIndex++;
                 }

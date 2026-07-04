@@ -77,7 +77,12 @@
                     <td>{{ $attendances->firstItem() + $i }}</td>
                     <td style="font-weight: 600; color: var(--text-primary);">{{ $att->student->name }}</td>
                     <td>{{ $att->classRoom->name }}</td>
-                    <td>{{ $att->subject->name }}</td>
+                    <td>
+                        <div style="font-weight: 600;">{{ $att->subject->name }}</div>
+                        @if($att->schedule)
+                        <div style="font-size: 11px; color: var(--text-muted);">{{ $att->schedule->time_range }}</div>
+                        @endif
+                    </td>
                     <td>{{ $att->date->format('d/m/Y') }}</td>
                     <td>{!! $att->status_badge !!}</td>
                     <td>{{ $att->teacher->name }}</td>

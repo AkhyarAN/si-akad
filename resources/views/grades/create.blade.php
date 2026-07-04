@@ -10,7 +10,7 @@
     <form id="gradeForm" method="POST" action="{{ route('grades.store') }}">
         @csrf
 
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+        <div class="filter-bar" style="margin-bottom: 24px;">
             <div class="form-group">
                 <label class="form-label">Kelas *</label>
                 <select name="class_room_id" id="classSelect" class="form-control" required onchange="loadGradeStudents()">
@@ -31,13 +31,26 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Jenis Penilaian *</label>
-                <select name="type" class="form-control" required>
+                <select name="type" class="form-control" required onchange="loadGradeStudents()">
                     <option value="">Pilih Jenis</option>
-                    <option value="tugas">Tugas</option>
-                    <option value="ulangan_harian">Ulangan Harian</option>
-                    <option value="uts">UTS</option>
-                    <option value="uas">UAS</option>
-                    <option value="praktik">Praktik</option>
+                    @if(auth()->user()->hasRole('guru') && !auth()->user()->hasRole('admin'))
+                        @php
+                            $plannedTypes = isset($examPlans) ? $examPlans->pluck('type')->unique() : collect();
+                        @endphp
+                        @if($plannedTypes->isEmpty())
+                            <option value="" disabled>Belum ada rencana (Tambahkan dulu)</option>
+                        @else
+                            @foreach($plannedTypes as $type)
+                                <option value="{{ $type }}">{{ ucwords(str_replace('_', ' ', $type)) }}</option>
+                            @endforeach
+                        @endif
+                    @else
+                        <option value="catatan_sikap">Catatan Sikap</option>
+                        <option value="formatif">Asesmen Formatif</option>
+                        <option value="sts">Sumatif Tengah Semester</option>
+                        <option value="sas">Sumatif Akhir Semester</option>
+                        <option value="kokurikuler">Kokurikuler</option>
+                    @endif
                 </select>
             </div>
             <div class="form-group">
@@ -54,7 +67,6 @@
                             <th style="width: 50px;">No</th>
                             <th>NIS</th>
                             <th>Nama Siswa</th>
-                            <th style="width: 150px;">Nilai (0-100)</th>
                         </tr>
                     </thead>
                     <tbody id="gradeStudentsBody"></tbody>
@@ -83,21 +95,29 @@ function loadGradeStudents() {
             const tbody = document.getElementById('gradeStudentsBody');
             tbody.innerHTML = '';
 
+            const typeSelect = document.querySelector('select[name="type"]');
+            const isCatatanSikap = typeSelect && typeSelect.value === 'catatan_sikap';
+            
             data.students.forEach((student, i) => {
+                const inputHtml = isCatatanSikap 
+                    ? `<textarea name="grades[${i}][notes]" class="form-control" rows="2" placeholder="Tuliskan catatan sikap..." required style="padding: 8px 12px; font-size: 13px;"></textarea>`
+                    : `<input type="number" name="grades[${i}][score]" class="form-control" min="0" max="100" step="0.1"
+                                   placeholder="0-100" required style="padding: 8px 12px; text-align: center; font-weight: 700;">`;
+
                 tbody.innerHTML += `
+                    <tr style="border-bottom: none;">
+                        <td style="border-bottom: none; padding-bottom: 4px;">${i + 1}</td>
+                        <td style="border-bottom: none; padding-bottom: 4px; color: var(--text-muted);">${student.nis}</td>
+                        <td style="border-bottom: none; padding-bottom: 4px; font-weight: 600; color: var(--text-primary);">${student.name}</td>
+                    </tr>
                     <tr>
-                        <td>${i + 1}</td>
-                        <td>${student.nis}</td>
-                        <td style="font-weight: 600; color: var(--text-primary);">${student.name}</td>
-                        <td>
+                        <td colspan="3" style="padding-top: 8px; padding-bottom: 20px;">
                             <input type="hidden" name="grades[${i}][student_id]" value="${student.id}">
-                            <input type="number" name="grades[${i}][score]" class="form-control" min="0" max="100" step="0.1"
-                                   placeholder="0-100" required style="padding: 8px 12px; text-align: center; font-weight: 700;">
+                            ${inputHtml}
                         </td>
                     </tr>
                 `;
             });
-
             document.getElementById('gradeStudentsList').style.display = 'block';
         });
 }

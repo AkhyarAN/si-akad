@@ -61,8 +61,8 @@
             @foreach($todaySchedules as $schedule)
             <div style="display: flex; align-items: center; gap: 16px; padding: 14px; border-radius: 12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 8px; border-left: 3px solid var(--primary-light);">
                 <div style="min-width: 70px; text-align: center;">
-                    <div style="font-size: 14px; font-weight: 700; color: var(--primary-light);">{{ substr($schedule->start_time, 0, 5) }}</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">{{ substr($schedule->end_time, 0, 5) }}</div>
+                    <div style="font-size: 14px; font-weight: 700; color: var(--primary-light);">Jam Ke-</div>
+                    <div style="font-size: 16px; font-weight: 700; color: var(--text-primary);">{{ $schedule->lesson_hour }}</div>
                 </div>
                 <div>
                     <div style="font-weight: 600; color: var(--text-primary); font-size: 14px;">{{ $schedule->subject->name }}</div>

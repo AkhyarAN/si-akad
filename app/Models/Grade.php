@@ -18,6 +18,7 @@ class Grade extends Model
         'type',
         'description',
         'score',
+        'notes',
         'max_score',
     ];
 
@@ -51,14 +52,25 @@ class Grade extends Model
         return $this->belongsTo(AcademicYear::class);
     }
 
+    public static function getTypes()
+    {
+        return [
+            'catatan_sikap' => 'Catatan Sikap',
+            'formatif' => 'Asesmen Formatif',
+            'sts' => 'Sumatif Tengah Semester',
+            'sas' => 'Sumatif Akhir Semester',
+            'kokurikuler' => 'Kokurikuler',
+        ];
+    }
+
     public function getTypeLabelAttribute()
     {
         return match ($this->type) {
-            'tugas' => 'Tugas',
-            'ulangan_harian' => 'Ulangan Harian',
-            'uts' => 'UTS',
-            'uas' => 'UAS',
-            'praktik' => 'Praktik',
+            'catatan_sikap' => 'Catatan Sikap',
+            'formatif' => 'Asesmen Formatif',
+            'sts' => 'Sumatif Tengah Semester',
+            'sas' => 'Sumatif Akhir Semester',
+            'kokurikuler' => 'Kokurikuler',
             default => $this->type,
         };
     }

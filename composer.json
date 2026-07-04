@@ -8,11 +8,12 @@
         "php": "^8.1",
         "barryvdh/laravel-dompdf": "^3.1",
         "guzzlehttp/guzzle": "^7.12",
+        "ifsnop/mysqldump-php": "^2.12",
         "laravel/framework": "^10.10",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
         "livewire/livewire": "^4.3",
-        "maatwebsite/excel": "^1.1",
+        "maatwebsite/excel": "^3.1",
         "spatie/laravel-permission": "^6.25"
     },
     "require-dev": {

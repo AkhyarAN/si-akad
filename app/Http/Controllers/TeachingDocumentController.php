@@ -38,7 +38,14 @@ class TeachingDocumentController extends Controller
         }
 
         $documents = $query->latest()->paginate(15);
-        $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        $user = auth()->user();
+        $teacher = $user->teacher ?? null;
+        if ($user->hasRole('guru') && !$user->hasRole('admin') && $teacher && $activeYear) {
+            $subjectIds = \App\Models\Schedule::where('teacher_id', $teacher->id)->where('academic_year_id', $activeYear->id)->pluck('subject_id')->unique();
+            $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
+        } else {
+            $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        }
 
         return view('teaching-documents.index', compact('documents', 'subjects'));
     }
@@ -46,8 +53,22 @@ class TeachingDocumentController extends Controller
     public function create()
     {
         $activeYear = AcademicYear::getActive();
-        $classes = $activeYear ? ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get() : collect();
-        $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        $user = auth()->user();
+        $teacher = $user->teacher ?? null;
+        if ($user->hasRole('guru') && !$user->hasRole('admin') && $teacher && $activeYear) {
+            $classIds = \App\Models\Schedule::where('teacher_id', $teacher->id)
+                ->where('academic_year_id', $activeYear->id)
+                ->pluck('class_room_id')->unique();
+            $subjectIds = \App\Models\Schedule::where('teacher_id', $teacher->id)
+                ->where('academic_year_id', $activeYear->id)
+                ->pluck('subject_id')->unique();
+            
+            $classes = ClassRoom::whereIn('id', $classIds)->orderBy('name')->get();
+            $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
+        } else {
+            $classes = $activeYear ? ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get() : collect();
+            $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        }
 
         return view('teaching-documents.create', compact('classes', 'subjects'));
     }
@@ -57,10 +78,10 @@ class TeachingDocumentController extends Controller
         $request->validate([
             'subject_id' => 'required|exists:subjects,id',
             'class_room_id' => 'nullable|exists:class_rooms,id',
-            'type' => 'required|in:rpp,silabus,prota,prosem,kkm,lainnya',
+            'type' => 'required|in:modul_ajar,atp,prota,prosem,kktp,lainnya',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:10240',
+            'file' => 'required|file|extensions:pdf,doc,docx,xls,xlsx,ppt,pptx,zip|max:10240',
         ]);
 
         $user = Auth::user();
@@ -107,7 +128,7 @@ class TeachingDocumentController extends Controller
     public function review(Request $request, TeachingDocument $teachingDocument)
     {
         $request->validate([
-            'status' => 'required|in:approved,rejected',
+            'status' => 'required|in:draft,submitted,approved,rejected',
             'review_notes' => 'nullable|string',
         ]);
 
@@ -118,8 +139,7 @@ class TeachingDocumentController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        $message = $request->status === 'approved' ? 'Dokumen disetujui!' : 'Dokumen ditolak!';
-        return back()->with('success', $message);
+        return back()->with('success', 'Status dokumen berhasil diubah!');
     }
 
     public function download(TeachingDocument $teachingDocument)

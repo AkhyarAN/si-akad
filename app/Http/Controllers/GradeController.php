@@ -41,8 +41,20 @@ class GradeController extends Controller
 
         $grades = $query->latest()->paginate(20);
 
-        $classes = $activeYear ? ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get() : collect();
-        $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        if ($user->hasRole('guru') && !$user->hasRole('admin') && $teacher) {
+            $classIds = \App\Models\Schedule::where('teacher_id', $teacher->id)
+                ->where('academic_year_id', $activeYear?->id)
+                ->pluck('class_room_id')->unique();
+            $subjectIds = \App\Models\Schedule::where('teacher_id', $teacher->id)
+                ->where('academic_year_id', $activeYear?->id)
+                ->pluck('subject_id')->unique();
+
+            $classes = $activeYear ? ClassRoom::whereIn('id', $classIds)->orderBy('name')->get() : collect();
+            $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
+        } else {
+            $classes = $activeYear ? ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get() : collect();
+            $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        }
 
         return view('grades.index', compact('grades', 'classes', 'subjects'));
     }
@@ -50,10 +62,31 @@ class GradeController extends Controller
     public function create()
     {
         $activeYear = AcademicYear::getActive();
-        $classes = $activeYear ? ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get() : collect();
-        $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        $user = Auth::user();
+        $teacher = $user->teacher ?? null;
+        $examPlans = collect();
 
-        return view('grades.create', compact('classes', 'subjects'));
+        if ($user->hasRole('guru') && !$user->hasRole('admin') && $teacher) {
+            $classIds = \App\Models\Schedule::where('teacher_id', $teacher->id)
+                ->where('academic_year_id', $activeYear?->id)
+                ->pluck('class_room_id')->unique();
+            $subjectIds = \App\Models\Schedule::where('teacher_id', $teacher->id)
+                ->where('academic_year_id', $activeYear?->id)
+                ->pluck('subject_id')->unique();
+
+            $classes = $activeYear ? ClassRoom::whereIn('id', $classIds)->orderBy('name')->get() : collect();
+            $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
+            
+            $examPlans = \App\Models\ExamPlan::where('teacher_id', $teacher->id)
+                ->where('academic_year_id', $activeYear?->id)
+                ->orderBy('date', 'desc')
+                ->get();
+        } else {
+            $classes = $activeYear ? ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get() : collect();
+            $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        }
+
+        return view('grades.create', compact('classes', 'subjects', 'examPlans'));
     }
 
     public function store(Request $request)
@@ -61,11 +94,12 @@ class GradeController extends Controller
         $request->validate([
             'class_room_id' => 'required|exists:class_rooms,id',
             'subject_id' => 'required|exists:subjects,id',
-            'type' => 'required|in:tugas,ulangan_harian,uts,uas,praktik',
+            'type' => 'required|in:catatan_sikap,formatif,sts,sas,kokurikuler',
             'description' => 'nullable|string|max:255',
             'grades' => 'required|array',
             'grades.*.student_id' => 'required|exists:students,id',
-            'grades.*.score' => 'required|numeric|min:0|max:100',
+            'grades.*.score' => 'nullable|numeric|min:0|max:100',
+            'grades.*.notes' => 'nullable|string|max:1000',
         ]);
 
         $user = Auth::user();
@@ -89,12 +123,13 @@ class GradeController extends Controller
                     'academic_year_id' => $activeYear->id,
                     'type' => $request->type,
                     'description' => $request->description,
-                    'score' => $item['score'],
+                    'score' => $request->type === 'catatan_sikap' ? null : ($item['score'] ?? 0),
+                    'notes' => $request->type === 'catatan_sikap' ? ($item['notes'] ?? null) : null,
                     'max_score' => 100,
                 ]);
 
                 // Notify parents if score below KKM
-                if ($item['score'] < $subject->kkm) {
+                if ($request->type !== 'catatan_sikap' && isset($item['score']) && $item['score'] < $subject->kkm) {
                     try {
                         $whatsApp = new WhatsAppService();
                         $whatsApp->sendGradeNotification($grade);
@@ -116,8 +151,23 @@ class GradeController extends Controller
     public function report(Request $request)
     {
         $activeYear = AcademicYear::getActive();
-        $classes = $activeYear ? ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get() : collect();
-        $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        $user = Auth::user();
+        $teacher = $user->teacher;
+
+        if ($user->hasRole('guru') && !$user->hasRole('admin') && $teacher) {
+            $classIds = \App\Models\Schedule::where('teacher_id', $teacher->id)
+                ->where('academic_year_id', $activeYear?->id)
+                ->pluck('class_room_id')->unique();
+            $subjectIds = \App\Models\Schedule::where('teacher_id', $teacher->id)
+                ->where('academic_year_id', $activeYear?->id)
+                ->pluck('subject_id')->unique();
+
+            $classes = $activeYear ? ClassRoom::whereIn('id', $classIds)->orderBy('name')->get() : collect();
+            $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
+        } else {
+            $classes = $activeYear ? ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get() : collect();
+            $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        }
 
         $reportData = null;
         $selectedClass = null;
@@ -139,17 +189,20 @@ class GradeController extends Controller
                     ->where('academic_year_id', $activeYear?->id)
                     ->get();
 
-                $gradesByType = $grades->groupBy('type')->map(function ($items) {
+                $gradesByType = $grades->groupBy('type')->map(function ($items, $type) {
+                    if ($type === 'catatan_sikap') {
+                        return $items->pluck('notes')->filter()->join('; ');
+                    }
                     return round($items->avg('score'), 1);
                 });
 
                 $reportData[] = [
                     'student' => $student,
-                    'tugas' => $gradesByType['tugas'] ?? '-',
-                    'ulangan_harian' => $gradesByType['ulangan_harian'] ?? '-',
-                    'uts' => $gradesByType['uts'] ?? '-',
-                    'uas' => $gradesByType['uas'] ?? '-',
-                    'praktik' => $gradesByType['praktik'] ?? '-',
+                    'catatan_sikap' => $gradesByType['catatan_sikap'] ?? '-',
+                    'formatif' => $gradesByType['formatif'] ?? '-',
+                    'sts' => $gradesByType['sts'] ?? '-',
+                    'sas' => $gradesByType['sas'] ?? '-',
+                    'kokurikuler' => $gradesByType['kokurikuler'] ?? '-',
                     'average' => $grades->count() > 0 ? round($grades->avg('score'), 1) : '-',
                     'below_kkm' => $grades->count() > 0 && round($grades->avg('score'), 1) < $selectedSubject->kkm,
                 ];

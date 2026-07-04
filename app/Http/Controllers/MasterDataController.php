@@ -8,6 +8,8 @@ use App\Models\Schedule;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Imports\TeachersImport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -82,6 +84,54 @@ class MasterDataController extends Controller
         return back()->with('success', 'Guru berhasil ditambahkan! Password default: password123');
     }
 
+    public function updateTeacher(Request $request, Teacher $teacher)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'nip' => 'nullable|string|max:50',
+            'email' => 'required|email|unique:users,email,' . $teacher->user_id,
+            'phone' => 'nullable|string|max:20',
+            'gender' => 'required|in:L,P',
+            'specialization' => 'nullable|string|max:100',
+        ]);
+
+        $teacher->user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+        ]);
+
+        $teacher->update([
+            'name' => $request->name,
+            'nip' => $request->nip,
+            'gender' => $request->gender,
+            'phone' => $request->phone,
+            'specialization' => $request->specialization,
+        ]);
+
+        return back()->with('success', 'Data guru berhasil diperbarui!');
+    }
+
+    public function deleteTeacher(Teacher $teacher)
+    {
+        $teacher->user->delete();
+        $teacher->delete();
+        return back()->with('success', 'Data guru berhasil dihapus!');
+    }
+
+    public function importTeachers(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:10240'
+        ]);
+
+        try {
+            Excel::import(new TeachersImport, $request->file('file'));
+            return back()->with('success', 'Data guru berhasil diimpor!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal mengimpor data: ' . $e->getMessage());
+        }
+    }
+
     // === Classes ===
     public function classes()
     {
@@ -146,6 +196,41 @@ class MasterDataController extends Controller
         return back()->with('success', 'Mata pelajaran berhasil ditambahkan!');
     }
 
+    public function updateSubject(Request $request, Subject $subject)
+    {
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'code' => 'required|string|max:20|unique:subjects,code,' . $subject->id,
+            'kkm' => 'required|integer|min:0|max:100',
+            'grade_level' => 'required|in:7,8,9,all',
+            'hours_per_week' => 'required|integer|min:1',
+        ]);
+
+        $subject->update($request->only(['name', 'code', 'kkm', 'grade_level', 'hours_per_week']));
+
+        return back()->with('success', 'Mata pelajaran berhasil diperbarui!');
+    }
+
+    public function deleteSubject(Subject $subject)
+    {
+        $subject->delete();
+        return back()->with('success', 'Mata pelajaran berhasil dihapus!');
+    }
+
+    public function importSubjects(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv,txt|max:10240'
+        ]);
+
+        try {
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\SubjectsImport, $request->file('file'));
+            return back()->with('success', 'Data mata pelajaran berhasil diimpor!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal mengimpor data: ' . $e->getMessage());
+        }
+    }
+
     // === Schedules ===
     public function schedules(Request $request)
     {
@@ -163,7 +248,7 @@ class MasterDataController extends Controller
                 ->where('academic_year_id', $activeYear->id)
                 ->with(['subject', 'teacher'])
                 ->orderByRaw("FIELD(day, 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu')")
-                ->orderBy('start_time')
+                ->orderBy('lesson_hour')
                 ->get();
         }
 
@@ -177,8 +262,7 @@ class MasterDataController extends Controller
             'subject_id' => 'required|exists:subjects,id',
             'teacher_id' => 'required|exists:teachers,id',
             'day' => 'required|in:senin,selasa,rabu,kamis,jumat,sabtu',
-            'start_time' => 'required',
-            'end_time' => 'required|after:start_time',
+            'lesson_hour' => 'required|integer|min:1|max:9',
         ]);
 
         $activeYear = AcademicYear::getActive();
@@ -190,8 +274,7 @@ class MasterDataController extends Controller
             'teacher_id' => $request->teacher_id,
             'academic_year_id' => $activeYear->id,
             'day' => $request->day,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
+            'lesson_hour' => $request->lesson_hour,
         ]);
 
         return back()->with('success', 'Jadwal berhasil ditambahkan!');
@@ -202,4 +285,20 @@ class MasterDataController extends Controller
         $schedule->delete();
         return back()->with('success', 'Jadwal berhasil dihapus!');
     }
+
+    public function importSchedules(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv,txt|max:10240'
+        ]);
+
+        try {
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\SchedulesImport, $request->file('file'));
+            return back()->with('success', 'Data jadwal berhasil diimpor!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal mengimpor jadwal: ' . $e->getMessage());
+        }
+    }
+
+    // === WhatsApp ===
 }

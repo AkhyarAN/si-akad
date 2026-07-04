@@ -51,6 +51,50 @@
             --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
+        body.theme-light {
+            --bg-dark: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --bg-card-hover: #F1F5F9;
+            --bg-sidebar: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #334155;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.08);
+            --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        body.theme-color-purple {
+            --primary: #6D28D9;
+            --primary-light: #8B5CF6;
+            --primary-dark: #4C1D95;
+            --secondary: #DB2777;
+            --secondary-light: #F472B6;
+            --accent: #0EA5E9;
+            --accent-light: #38BDF8;
+        }
+
+        body.theme-color-emerald {
+            --primary: #047857;
+            --primary-light: #10B981;
+            --primary-dark: #064E3B;
+            --secondary: #0369A1;
+            --secondary-light: #0EA5E9;
+            --accent: #F59E0B;
+            --accent-light: #FBBF24;
+        }
+
+        body.theme-color-rose {
+            --primary: #BE123C;
+            --primary-light: #F43F5E;
+            --primary-dark: #881337;
+            --secondary: #4338CA;
+            --secondary-light: #6366F1;
+            --accent: #D97706;
+            --accent-light: #F59E0B;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -87,6 +131,7 @@
             left: 0;
             width: var(--sidebar-width);
             height: 100vh;
+            height: 100dvh;
             background: var(--bg-sidebar);
             border-right: 1px solid var(--glass-border);
             z-index: 100;
@@ -250,7 +295,7 @@
 
         /* === NAVBAR === */
         .navbar {
-            height: var(--navbar-height);
+            min-height: var(--navbar-height);
             padding: 0 32px;
             display: flex;
             align-items: center;
@@ -272,6 +317,9 @@
         .navbar-left h2 {
             font-size: 20px;
             font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .breadcrumb {
@@ -280,6 +328,9 @@
             gap: 8px;
             font-size: 13px;
             color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .breadcrumb a {
@@ -334,6 +385,7 @@
             border: 1px solid var(--glass-border);
             border-radius: 16px;
             padding: 24px;
+            min-width: 0;
             box-shadow: var(--glass-shadow);
             transition: all 0.3s ease;
         }
@@ -750,11 +802,31 @@
             }
 
             .navbar {
-                padding: 0 16px;
+                padding: 12px 16px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .sidebar-menu {
+                padding-bottom: 32px;
+            }
+
+            .navbar-left {
+                width: 100%;
+            }
+
+            .navbar-right {
+                width: 100%;
+                justify-content: flex-end;
             }
 
             .stats-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .hide-on-mobile {
+                display: none !important;
             }
         }
 
@@ -808,6 +880,7 @@
         .filter-bar .form-group {
             margin-bottom: 0;
             min-width: 180px;
+            flex: 1;
         }
     </style>
 </head>
@@ -819,8 +892,8 @@
                 <i class="bi bi-mortarboard-fill"></i>
             </div>
             <div class="brand-text">
-                <h1>SIAKAD</h1>
-                <p>SMP Digital System</p>
+                <h1>{{ \App\Models\Setting::get('app_name', 'SIAKAD') }}</h1>
+                <p>{{ \App\Models\Setting::get('app_subtitle', 'SMP Digital System') }}</p>
             </div>
         </div>
 
@@ -847,6 +920,20 @@
             <a href="{{ route('master.schedules') }}" class="menu-item {{ request()->routeIs('master.schedules') ? 'active' : '' }}">
                 <i class="bi bi-clock-fill"></i> Jadwal Pelajaran
             </a>
+            @if(auth()->user()->hasRole('admin'))
+            <a href="{{ route('master.dapodik') }}" class="menu-item {{ request()->routeIs('master.dapodik') ? 'active' : '' }}">
+                <i class="bi bi-cloud-arrow-down-fill"></i> Sinkron Dapodik
+            </a>
+            <a href="{{ route('master.whatsapp') }}" class="menu-item {{ request()->routeIs('master.whatsapp') ? 'active' : '' }}">
+                <i class="bi bi-whatsapp"></i> WhatsApp Gateway
+            </a>
+            <a href="{{ route('master.settings') }}" class="menu-item {{ request()->routeIs('master.settings') ? 'active' : '' }}">
+                <i class="bi bi-gear-fill"></i> Pengaturan Aplikasi
+            </a>
+            <a href="{{ route('master.backups') }}" class="menu-item {{ request()->routeIs('master.backups') ? 'active' : '' }}">
+                <i class="bi bi-database-fill-down"></i> Backup Database
+            </a>
+            @endif
             @endif
 
             @if(!auth()->user()->hasRole('orang_tua'))
@@ -854,21 +941,39 @@
             <a href="{{ route('students.index') }}" class="menu-item {{ request()->routeIs('students.*') ? 'active' : '' }}">
                 <i class="bi bi-people-fill"></i> Data Siswa
             </a>
+            @if(auth()->user()->hasRole('wali_kelas'))
+            <a href="{{ route('homeroom.index') }}" class="menu-item {{ request()->routeIs('homeroom.*') ? 'active' : '' }}">
+                <i class="bi bi-house-heart-fill"></i> Kelas Saya
+            </a>
+            @endif
+            <a href="{{ route('teaching-documents.index') }}" class="menu-item {{ request()->routeIs('teaching-documents.*') ? 'active' : '' }}">
+                <i class="bi bi-folder-fill"></i> Perangkat Mengajar
+            </a>
+            @if(auth()->user()->hasRole('guru') || auth()->user()->hasRole('wali_kelas'))
+            <a href="{{ route('teacher-attendances.index') }}" class="menu-item {{ request()->routeIs('teacher-attendances.*') ? 'active' : '' }}">
+                <i class="bi bi-person-video3"></i> Riwayat Mengajar
+            </a>
+            <a href="{{ route('exam-plans.index') }}" class="menu-item {{ request()->routeIs('exam-plans.*') ? 'active' : '' }}">
+                <i class="bi bi-calendar2-check-fill"></i> Rencana Penilaian
+            </a>
+            @endif
             <a href="{{ route('attendance.index') }}" class="menu-item {{ request()->routeIs('attendance.index') || request()->routeIs('attendance.create') ? 'active' : '' }}">
                 <i class="bi bi-clipboard-check-fill"></i> Absensi
             </a>
             <a href="{{ route('grades.index') }}" class="menu-item {{ request()->routeIs('grades.index') || request()->routeIs('grades.create') ? 'active' : '' }}">
                 <i class="bi bi-journal-bookmark-fill"></i> Penilaian
             </a>
-            <a href="{{ route('teaching-documents.index') }}" class="menu-item {{ request()->routeIs('teaching-documents.*') ? 'active' : '' }}">
-                <i class="bi bi-folder-fill"></i> Perangkat Mengajar
-            </a>
             @endif
 
             <div class="menu-label">Laporan</div>
+            @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('kepala_sekolah'))
+            <a href="{{ route('teacher-attendances.report') }}" class="menu-item {{ request()->routeIs('teacher-attendances.report') ? 'active' : '' }}">
+                <i class="bi bi-person-bounding-box"></i> Rekap Absen Guru
+            </a>
+            @endif
             @if(!auth()->user()->hasRole('orang_tua'))
             <a href="{{ route('attendance.report') }}" class="menu-item {{ request()->routeIs('attendance.report') ? 'active' : '' }}">
-                <i class="bi bi-bar-chart-fill"></i> Rekap Absensi
+                <i class="bi bi-bar-chart-fill"></i> Rekap Absensi Siswa
             </a>
             @endif
             <a href="{{ route('grades.report') }}" class="menu-item {{ request()->routeIs('grades.report') ? 'active' : '' }}">
@@ -899,23 +1004,30 @@
     <div class="main-content">
         <!-- Navbar -->
         <header class="navbar">
-            <div class="navbar-left">
+            <div class="navbar-left" style="flex: 1; min-width: 0;">
                 <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
                     <i class="bi bi-list"></i>
                 </button>
-                <div>
+                <div style="min-width: 0;">
                     <h2>{{ $title ?? 'Dashboard' }}</h2>
                     @if(isset($breadcrumb))
                     <div class="breadcrumb">
-                        <a href="{{ route('dashboard') }}">Home</a>
-                        <i class="bi bi-chevron-right" style="font-size: 10px;"></i>
-                        <span>{{ $breadcrumb }}</span>
+                        <a href="{{ route('dashboard') }}" style="flex-shrink: 0;">Home</a>
+                        <i class="bi bi-chevron-right" style="font-size: 10px; flex-shrink: 0;"></i>
+                        <span style="overflow: hidden; text-overflow: ellipsis;">{{ $breadcrumb }}</span>
                     </div>
                     @endif
                 </div>
             </div>
             <div class="navbar-right">
-                <div class="btn-navbar" title="Tahun Ajaran Aktif" style="width: auto; padding: 0 14px; font-size: 12px; gap: 6px;">
+                <div style="display: flex; gap: 6px; align-items: center; margin-right: 12px;">
+                    <button class="btn-navbar" onclick="changeFontSize(10)" style="font-weight: bold; font-size: 14px;" title="Perbesar Teks">A+</button>
+                    <button class="btn-navbar" onclick="changeFontSize(-10)" style="font-weight: bold; font-size: 12px;" title="Perkecil Teks">A-</button>
+                </div>
+                <button class="btn-navbar" onclick="toggleTheme()" title="Ganti Tema">
+                    <i class="bi bi-moon-fill" id="theme-icon"></i>
+                </button>
+                <div class="btn-navbar hide-on-mobile" title="Tahun Ajaran Aktif" style="width: auto; padding: 0 14px; font-size: 12px; gap: 6px;">
                     <i class="bi bi-calendar-event" style="font-size: 14px;"></i>
                     {{ \App\Models\AcademicYear::getActive()?->full_name ?? 'Belum diset' }}
                 </div>
@@ -980,6 +1092,77 @@
         }
     </script>
 
+    <script>
+        // Set initial theme before body renders to prevent flash
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.classList.add('theme-light');
+        }
+        
+        const savedColorTheme = localStorage.getItem('colorTheme');
+        if (savedColorTheme) {
+            document.body.classList.add(savedColorTheme);
+        }
+
+        const savedFontSize = localStorage.getItem('fontSize');
+        if (savedFontSize) {
+            document.body.style.zoom = (savedFontSize / 100);
+            // Fallback for Firefox
+            document.body.style.MozTransform = `scale(${savedFontSize / 100})`;
+            document.body.style.MozTransformOrigin = 'top left';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            const icon = document.getElementById('theme-icon');
+            if (savedTheme === 'light' && icon) {
+                icon.classList.replace('bi-moon-fill', 'bi-sun-fill');
+            }
+        });
+
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+            
+            if (body.classList.contains('theme-light')) {
+                body.classList.remove('theme-light');
+                localStorage.setItem('theme', 'dark');
+                if(icon) icon.classList.replace('bi-sun-fill', 'bi-moon-fill');
+            } else {
+                body.classList.add('theme-light');
+                localStorage.setItem('theme', 'light');
+                if(icon) icon.classList.replace('bi-moon-fill', 'bi-sun-fill');
+            }
+        }
+
+        function setColorTheme(themeClass) {
+            const body = document.body;
+            // Remove existing color themes
+            body.classList.remove('theme-color-purple', 'theme-color-emerald', 'theme-color-rose');
+            
+            if (themeClass) {
+                body.classList.add(themeClass);
+                localStorage.setItem('colorTheme', themeClass);
+            } else {
+                localStorage.removeItem('colorTheme');
+            }
+        }
+
+        function changeFontSize(step) {
+            let currentSize = parseInt(localStorage.getItem('fontSize') || '100');
+            currentSize += step;
+            
+            // Limit font size between 80% and 150%
+            if (currentSize < 80) currentSize = 80;
+            if (currentSize > 150) currentSize = 150;
+            
+            document.body.style.zoom = (currentSize / 100);
+            // Fallback for Firefox
+            document.body.style.MozTransform = `scale(${currentSize / 100})`;
+            document.body.style.MozTransformOrigin = 'top left';
+            
+            localStorage.setItem('fontSize', currentSize);
+        }
+    </script>
     @yield('scripts')
 </body>
 </html>

@@ -18,7 +18,7 @@ class AttendanceController extends Controller
     public function index(Request $request)
     {
         $activeYear = AcademicYear::getActive();
-        $query = Attendance::with(['student', 'subject', 'classRoom', 'teacher']);
+        $query = Attendance::with(['student', 'subject', 'schedule', 'classRoom', 'teacher']);
 
         // Filters
         if ($request->filled('class_room_id')) {
@@ -47,8 +47,16 @@ class AttendanceController extends Controller
 
         $attendances = $query->latest()->paginate(20);
 
-        $classes = $activeYear ? ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get() : collect();
-        $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        if ($user->hasRole('guru') && !$user->hasRole('admin') && isset($teacher)) {
+            $classIds = \App\Models\Schedule::where('teacher_id', $teacher->id)->where('academic_year_id', $activeYear?->id)->pluck('class_room_id')->unique();
+            $subjectIds = \App\Models\Schedule::where('teacher_id', $teacher->id)->where('academic_year_id', $activeYear?->id)->pluck('subject_id')->unique();
+            
+            $classes = $activeYear ? ClassRoom::whereIn('id', $classIds)->orderBy('name')->get() : collect();
+            $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
+        } else {
+            $classes = $activeYear ? ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get() : collect();
+            $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        }
 
         return view('attendance.index', compact('attendances', 'classes', 'subjects'));
     }
@@ -72,12 +80,16 @@ class AttendanceController extends Controller
             ->where('academic_year_id', $activeYear->id)
             ->where('day', $today)
             ->with(['classRoom', 'subject'])
-            ->orderBy('start_time')
+            ->orderBy('lesson_hour')
             ->get();
 
         // Also get all classes for manual selection
         $classes = ClassRoom::where('academic_year_id', $activeYear->id)->orderBy('name')->get();
-        $subjects = Subject::where('is_active', true)->orderBy('name')->get();
+        
+        $subjectIds = Schedule::where('teacher_id', $teacher->id)
+            ->where('academic_year_id', $activeYear->id)
+            ->pluck('subject_id')->unique();
+        $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
 
         return view('attendance.create', compact('schedules', 'classes', 'subjects', 'teacher'));
     }
@@ -91,7 +103,7 @@ class AttendanceController extends Controller
 
         // Check existing attendance for today
         $existing = Attendance::where('class_room_id', $request->class_room_id)
-            ->where('subject_id', $request->subject_id)
+            ->where('lesson_hour', $request->lesson_hour)
             ->whereDate('date', $request->date ?? today())
             ->pluck('status', 'student_id')
             ->toArray();
@@ -107,7 +119,9 @@ class AttendanceController extends Controller
         $request->validate([
             'class_room_id' => 'required|exists:class_rooms,id',
             'subject_id' => 'required|exists:subjects,id',
+            'lesson_hour' => 'required|integer|min:1|max:9',
             'date' => 'required|date',
+            'teacher_photo' => 'required|string',
             'attendance' => 'required|array',
             'attendance.*.student_id' => 'required|exists:students,id',
             'attendance.*.status' => 'required|in:hadir,izin,sakit,alpha',
@@ -120,25 +134,45 @@ class AttendanceController extends Controller
             return back()->with('error', 'Data guru tidak ditemukan.');
         }
 
-        // Find schedule
+        // Find schedule (optional, to link back if it exists)
         $schedule = Schedule::where('class_room_id', $request->class_room_id)
             ->where('subject_id', $request->subject_id)
-            ->where('teacher_id', $teacher->id)
+            ->where('lesson_hour', $request->lesson_hour)
             ->first();
 
         DB::beginTransaction();
         try {
+            // 1. Process Teacher Attendance (Selfie)
+            $imageData = str_replace('data:image/jpeg;base64,', '', $request->teacher_photo);
+            $imageData = str_replace(' ', '+', $imageData);
+            $imageName = 'teacher-attendances/' . $teacher->id . '-' . time() . '-' . \Illuminate\Support\Str::random(10) . '.jpg';
+            \Illuminate\Support\Facades\Storage::disk('public')->put($imageName, base64_decode($imageData));
+
+            \App\Models\TeacherAttendance::create([
+                'teacher_id' => $teacher->id,
+                'class_room_id' => $request->class_room_id,
+                'subject_id' => $request->subject_id,
+                'lesson_hour' => $request->lesson_hour,
+                'schedule_id' => $schedule ? $schedule->id : null,
+                'date' => $request->date,
+                'time_in' => date('H:i:s'),
+                'photo_in' => $imageName,
+                'status' => 'hadir'
+            ]);
+
+            // 2. Process Student Attendance
             $notifyAttendances = [];
 
             foreach ($request->attendance as $item) {
                 $attendance = Attendance::updateOrCreate(
                     [
                         'student_id' => $item['student_id'],
-                        'subject_id' => $request->subject_id,
+                        'lesson_hour' => $request->lesson_hour,
                         'date' => $request->date,
                     ],
                     [
-                        'schedule_id' => $schedule?->id,
+                        'schedule_id' => $schedule ? $schedule->id : null,
+                        'subject_id' => $request->subject_id,
                         'class_room_id' => $request->class_room_id,
                         'teacher_id' => $teacher->id,
                         'status' => $item['status'],

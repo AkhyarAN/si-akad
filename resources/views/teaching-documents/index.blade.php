@@ -18,11 +18,12 @@
             <label class="form-label">Jenis</label>
             <select name="type" class="form-control">
                 <option value="">Semua</option>
-                <option value="rpp" {{ request('type') == 'rpp' ? 'selected' : '' }}>RPP</option>
-                <option value="silabus" {{ request('type') == 'silabus' ? 'selected' : '' }}>Silabus</option>
+                <option value="modul_ajar" {{ request('type') == 'modul_ajar' ? 'selected' : '' }}>Modul Ajar</option>
+                <option value="atp" {{ request('type') == 'atp' ? 'selected' : '' }}>ATP</option>
                 <option value="prota" {{ request('type') == 'prota' ? 'selected' : '' }}>Prota</option>
                 <option value="prosem" {{ request('type') == 'prosem' ? 'selected' : '' }}>Prosem</option>
-                <option value="kkm" {{ request('type') == 'kkm' ? 'selected' : '' }}>KKM</option>
+                <option value="kktp" {{ request('type') == 'kktp' ? 'selected' : '' }}>KKTP</option>
+                <option value="lainnya" {{ request('type') == 'lainnya' ? 'selected' : '' }}>Lainnya</option>
             </select>
         </div>
         <div class="form-group">
@@ -65,17 +66,50 @@
                                 <i class="bi bi-download"></i>
                             </a>
                             @if(auth()->user()->hasRole('kepala_sekolah') || auth()->user()->hasRole('admin'))
-                                @if($doc->status === 'submitted')
-                                <form method="POST" action="{{ route('teaching-documents.review', $doc) }}" style="display: inline;">
-                                    @csrf @method('PUT')
-                                    <input type="hidden" name="status" value="approved">
-                                    <button type="submit" class="btn btn-sm btn-success" title="Setujui"><i class="bi bi-check-lg"></i></button>
-                                </form>
-                                @endif
+                                <button type="button" class="btn btn-sm btn-primary" title="Ubah Status" onclick="document.getElementById('modalStatus{{ $doc->id }}').classList.add('show')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
                             @endif
                         </div>
                     </td>
                 </tr>
+
+                @if(auth()->user()->hasRole('kepala_sekolah') || auth()->user()->hasRole('admin'))
+                <!-- Modal Status {{ $doc->id }} -->
+                <div class="modal-backdrop" id="modalStatus{{ $doc->id }}">
+                    <div class="modal-content" style="max-width: 500px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h3 class="modal-title" style="margin: 0;">Ubah Status Dokumen</h3>
+                            <button type="button" onclick="document.getElementById('modalStatus{{ $doc->id }}').classList.remove('show')" style="background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer;">&times;</button>
+                        </div>
+                        
+                        <form method="POST" action="{{ route('teaching-documents.review', $doc) }}">
+                            @csrf @method('PUT')
+                            
+                            <div class="form-group">
+                                <label class="form-label">Status *</label>
+                                <select name="status" class="form-control" required>
+                                    <option value="draft" {{ $doc->status == 'draft' ? 'selected' : '' }}>Draft</option>
+                                    <option value="submitted" {{ $doc->status == 'submitted' ? 'selected' : '' }}>Diajukan</option>
+                                    <option value="approved" {{ $doc->status == 'approved' ? 'selected' : '' }}>Disetujui</option>
+                                    <option value="rejected" {{ $doc->status == 'rejected' ? 'selected' : '' }}>Ditolak</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Catatan / Pesan (Opsional)</label>
+                                <textarea name="review_notes" class="form-control" rows="3" placeholder="Contoh: Tolong perbaiki bagian tujuan pembelajaran...">{{ $doc->review_notes }}</textarea>
+                            </div>
+                            
+                            <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalStatus{{ $doc->id }}').classList.remove('show')">Batal</button>
+                                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                @endif
+
                 @empty
                 <tr><td colspan="7"><div class="empty-state"><i class="bi bi-folder-x"></i><p>Tidak ada dokumen</p></div></td></tr>
                 @endforelse

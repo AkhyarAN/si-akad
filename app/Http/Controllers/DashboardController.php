@@ -146,7 +146,7 @@ class DashboardController extends Controller
             ->where('academic_year_id', $activeYear?->id)
             ->where('day', $today)
             ->with(['classRoom', 'subject'])
-            ->orderBy('start_time')
+            ->orderBy('lesson_hour')
             ->get();
 
         // Recent grades
@@ -212,11 +212,21 @@ class DashboardController extends Controller
                 ->groupBy('subjects.name')
                 ->get();
 
+            // Upcoming Exams
+            $upcomingExams = \App\Models\ExamPlan::where('class_room_id', $student->class_room_id)
+                ->where('academic_year_id', $activeYear?->id)
+                ->where('date', '>=', today())
+                ->with('subject')
+                ->orderBy('date', 'asc')
+                ->take(3)
+                ->get();
+
             $studentsData[] = [
                 'student' => $student,
                 'attendance' => $monthlyAttendance,
                 'recentGrades' => $recentGrades,
                 'subjectAverages' => $subjectAverages,
+                'upcomingExams' => $upcomingExams,
             ];
         }
 

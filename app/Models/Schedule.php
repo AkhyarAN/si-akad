@@ -15,8 +15,7 @@ class Schedule extends Model
         'teacher_id',
         'academic_year_id',
         'day',
-        'start_time',
-        'end_time',
+        'lesson_hour',
     ];
 
     public function classRoom()
@@ -46,6 +45,6 @@ class Schedule extends Model
 
     public function getTimeRangeAttribute()
     {
-        return substr($this->start_time, 0, 5) . ' - ' . substr($this->end_time, 0, 5);
+        return 'Jam Ke-' . $this->lesson_hour;
     }
 }

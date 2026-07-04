@@ -44,6 +44,31 @@
             </div>
         </div>
 
+        <!-- Upcoming Exams -->
+        @if(isset($data['upcomingExams']) && $data['upcomingExams']->isNotEmpty())
+            <div style="margin-bottom: 24px;">
+                <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">
+                    <i class="bi bi-calendar2-check-fill" style="color: var(--warning-light);"></i> Pengingat Ujian / Tugas Mendatang
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    @foreach($data['upcomingExams'] as $exam)
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(217, 119, 6, 0.1); border-left: 3px solid var(--warning-light); border-radius: 8px;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 14px; color: var(--warning-light);">{{ $exam->title }}</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">{{ $exam->subject->name }} &bull; {{ str_replace('_', ' ', strtoupper($exam->type)) }}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 13px; font-weight: 700;">{{ $exam->date->format('d M Y') }}</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">
+                                {{ $exam->date->isToday() ? 'Hari ini' : ($exam->date->diffInDays(today()) . ' hari lagi') }}
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         <div class="grid-2">
             <!-- Grade Chart -->
             <div>

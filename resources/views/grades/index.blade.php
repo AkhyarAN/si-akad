@@ -9,7 +9,9 @@
     </div>
     <div style="display: flex; gap: 8px;">
         <a href="{{ route('grades.report') }}" class="btn btn-secondary"><i class="bi bi-graph-up"></i> Rekap Nilai</a>
+        @if(!auth()->user()->hasRole('kepala_sekolah'))
         <a href="{{ route('grades.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Input Nilai</a>
+        @endif
     </div>
 </div>
 
@@ -37,11 +39,11 @@
             <label class="form-label">Jenis</label>
             <select name="type" class="form-control">
                 <option value="">Semua</option>
-                <option value="tugas" {{ request('type') == 'tugas' ? 'selected' : '' }}>Tugas</option>
-                <option value="ulangan_harian" {{ request('type') == 'ulangan_harian' ? 'selected' : '' }}>Ulangan Harian</option>
-                <option value="uts" {{ request('type') == 'uts' ? 'selected' : '' }}>UTS</option>
-                <option value="uas" {{ request('type') == 'uas' ? 'selected' : '' }}>UAS</option>
-                <option value="praktik" {{ request('type') == 'praktik' ? 'selected' : '' }}>Praktik</option>
+                <option value="catatan_sikap" {{ request('type') == 'catatan_sikap' ? 'selected' : '' }}>Catatan Sikap</option>
+                <option value="formatif" {{ request('type') == 'formatif' ? 'selected' : '' }}>Asesmen Formatif</option>
+                <option value="sts" {{ request('type') == 'sts' ? 'selected' : '' }}>Sumatif Tengah Semester</option>
+                <option value="sas" {{ request('type') == 'sas' ? 'selected' : '' }}>Sumatif Akhir Semester</option>
+                <option value="kokurikuler" {{ request('type') == 'kokurikuler' ? 'selected' : '' }}>Kokurikuler</option>
             </select>
         </div>
         <div class="form-group">

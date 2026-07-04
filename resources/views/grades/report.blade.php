@@ -42,11 +42,11 @@
                 <tr>
                     <th>Rank</th>
                     <th>Nama Siswa</th>
-                    <th style="text-align: center;">Tugas</th>
-                    <th style="text-align: center;">UH</th>
-                    <th style="text-align: center;">UTS</th>
-                    <th style="text-align: center;">UAS</th>
-                    <th style="text-align: center;">Praktik</th>
+                    <th style="text-align: center;">Formatif</th>
+                    <th style="text-align: center;">STS</th>
+                    <th style="text-align: center;">SAS</th>
+                    <th style="text-align: center;">Kokurikuler</th>
+                    <th style="text-align: center;">Sikap</th>
                     <th style="text-align: center;">Rata-rata</th>
                     <th>Status</th>
                 </tr>
@@ -56,11 +56,11 @@
                 <tr>
                     <td style="font-weight: 700; color: var(--text-primary);">{{ $i + 1 }}</td>
                     <td style="font-weight: 600; color: var(--text-primary);">{{ $r['student']->name }}</td>
-                    <td style="text-align: center;">{{ $r['tugas'] }}</td>
-                    <td style="text-align: center;">{{ $r['ulangan_harian'] }}</td>
-                    <td style="text-align: center;">{{ $r['uts'] }}</td>
-                    <td style="text-align: center;">{{ $r['uas'] }}</td>
-                    <td style="text-align: center;">{{ $r['praktik'] }}</td>
+                    <td style="text-align: center;">{{ $r['formatif'] }}</td>
+                    <td style="text-align: center;">{{ $r['sts'] }}</td>
+                    <td style="text-align: center;">{{ $r['sas'] }}</td>
+                    <td style="text-align: center;">{{ $r['kokurikuler'] }}</td>
+                    <td style="text-align: center; font-size: 11px;">{{ Str::limit($r['catatan_sikap'], 30) }}</td>
                     <td style="text-align: center; font-weight: 800; font-size: 15px; color: {{ is_numeric($r['average']) && $r['average'] >= $selectedSubject->kkm ? 'var(--success-light)' : 'var(--danger-light)' }};">
                         {{ $r['average'] }}
                     </td>

@@ -7,6 +7,8 @@ use App\Models\ClassRoom;
 use App\Models\ParentModel;
 use App\Models\Student;
 use App\Models\User;
+use App\Imports\StudentsImport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -138,7 +140,23 @@ class StudentController extends Controller
 
     public function destroy(Student $student)
     {
-        $student->update(['is_active' => false]);
-        return redirect()->route('students.index')->with('success', 'Siswa berhasil dinonaktifkan!');
+        $student->user()->delete();
+        $student->delete();
+        return redirect()->route('students.index')->with('success', 'Siswa berhasil dihapus.');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:10240',
+            'class_room_id' => 'required|exists:class_rooms,id'
+        ]);
+
+        try {
+            Excel::import(new StudentsImport($request->class_room_id), $request->file('file'));
+            return redirect()->route('students.index')->with('success', 'Data siswa berhasil diimpor!');
+        } catch (\Exception $e) {
+            return redirect()->route('students.index')->with('error', 'Gagal mengimpor data: ' . $e->getMessage());
+        }
     }
 }
